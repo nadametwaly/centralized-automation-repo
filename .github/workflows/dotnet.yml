@@ -1,0 +1,105 @@
+name: Reusable dotNET Workflow
+on: 
+    workflow_call:
+        inputs:
+            dotnet-version:
+                description: dotnet version to use
+                required: true
+                type: string
+            project-path:
+                description: path to the .NET project
+                required: true
+                type: string
+            build-configuration:
+                description: config
+                required: true
+                type: string
+            run-tests:
+                description: Run unit tests
+                required: true
+                type: boolean
+            docker_username:
+                description: Docker username
+                required: false
+                default: '${{ github.actor }}'
+                type: string
+        secrets:
+            docker_password:
+                description: Docker registry password
+                required: true
+
+
+jobs:
+    cicd:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            security-events: write
+            actions: read
+
+        env:
+            IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/dotnet-app
+
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+
+          - name: Setup .NET
+            uses: actions/setup-dotnet@v4
+            with:
+                dotnet-version: ${{ inputs.dotnet-version }}
+
+          - name: Restore
+            run: dotnet restore ${{ inputs.project-path }}
+
+          - name: Build
+            run: dotnet build ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} --no-restore
+
+          - name: Publish
+            run: dotnet publish ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} -o build-output
+
+          - name: Unit Tests
+            if: ${{ inputs.run-tests }}
+            run: dotnet test ${{ inputs.project-path }} --no-build
+
+          - name: Run Gitleaks for secret detection
+            uses: gitleaks/gitleaks-action@v2
+            continue-on-error: true
+          - name: Upload Gitleaks results to GitHub
+            uses: github/codeql-action/upload-sarif@v3
+            if: always()
+            with:
+                sarif_file: results.sarif
+                category: gitleaks
+
+          - name: CodeQL Analysis
+            uses: github/codeql-action/init@v3
+            with:
+                languages: csharp
+          - name: Perform CodeQL Analysis
+            uses: github/codeql-action/analyze@v3
+
+          - name: Login to DockerHub
+            uses: docker/login-action@v3
+            with:
+                username: ${{ inputs.docker_username }}
+                password: ${{ secrets.docker_password }}
+
+          - name: Build & Push Docker Image
+            run: |
+                COMMIT_SHA=${GITHUB_SHA::7}
+                docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA .
+                docker push $IMAGE_NAME:latest
+                docker push $IMAGE_NAME:$COMMIT_SHA
+
+          - name: Run Trivy     #vulnerability scanner
+            uses: aquasecurity/trivy-action@0.33.1
+            with:
+                image-ref: '$IMAGE_NAME:latest'
+                format: 'sarif'
+                output: 'trivy-results.sarif'
+                severity: 'CRITICAL,HIGH'
+          - name: Upload Trivy scan results to GitHub Security tab
+            uses: github/codeql-action/upload-sarif@v4
+            with:
+                sarif_file: 'trivy-results.sarif'
