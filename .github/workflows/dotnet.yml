@@ -18,6 +18,11 @@ on:
                 description: Run unit tests
                 required: true
                 type: boolean
+            dockerfile-path:
+                description: Path to Dockerfile
+                required: false
+                default: './Dockerfile'
+                type: string
             docker_username:
                 description: Docker username
                 required: false
@@ -80,7 +85,7 @@ jobs:
           - name: Build & Push Docker Image
             run: |
                 COMMIT_SHA=${GITHUB_SHA::7}
-                docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA .
+                docker build -f ${{ inputs.dockerfile-path }} -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA .
                 docker push $IMAGE_NAME:latest
                 docker push $IMAGE_NAME:$COMMIT_SHA
 
