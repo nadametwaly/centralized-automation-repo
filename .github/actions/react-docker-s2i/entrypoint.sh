@@ -1,19 +1,63 @@
 #!/bin/sh
 set -e
 
-APP_PATH="$GITHUB_WORKSPACE/React-Frontend"
-IMAGE_NAME="$INPUT_REGISTRY/$INPUT_USERNAME/$INPUT_IMAGE_NAME"
-SHA_TAG="$IMAGE_NAME:$(echo $GITHUB_SHA | cut -c1-7)"
-LATEST_TAG="$IMAGE_NAME:$INPUT_TAG"
+echo "🚀 React S2I Action Started"
 
-echo "$INPUT_PASSWORD" | docker login "$INPUT_REGISTRY" -u "$INPUT_USERNAME" --password-stdin
+# Inputs
+REGISTRY="${INPUT_REGISTRY}"
+USERNAME="${INPUT_USERNAME}"
+PASSWORD="${INPUT_PASSWORD}"
+IMAGE_NAME="${INPUT_IMAGE_NAME}"
+TAG="${INPUT_TAG:-latest}"
 
-docker build -t "$LATEST_TAG" -t "$SHA_TAG" "$APP_PATH"
-docker push "$LATEST_TAG"
-docker push "$SHA_TAG"
+SHA_TAG="${GITHUB_SHA}"
 
-DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$SHA_TAG" | cut -d'@' -f2)
+# Validate inputs
+if [ -z "$REGISTRY" ] || [ -z "$USERNAME" ] || [ -z "$PASSWORD" ] || [ -z "$IMAGE_NAME" ]; then
+  echo "❌ Missing required inputs"
+  exit 1
+fi
 
-echo "image_name=$SHA_TAG" >> $GITHUB_OUTPUT
-echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
-echo "push_status=success" >> $GITHUB_OUTPUT
+# Validate build output
+if [ ! -d "frontend/dist" ]; then
+  echo "❌ frontend/dist not found. Did you run npm run build?"
+  exit 1
+fi
+
+if [ ! -f "frontend/nginx.conf" ]; then
+  echo "❌ frontend/nginx.conf not found"
+  exit 1
+fi
+
+# Login to registry
+echo "$PASSWORD" | docker login "$REGISTRY" -u "$USERNAME" --password-stdin
+
+# Prepare build context
+echo "📦 Preparing Docker build context..."
+BUILD_CTX=$(mktemp -d)
+
+cp -r frontend/dist "$BUILD_CTX/dist"
+cp frontend/nginx.conf "$BUILD_CTX/nginx.conf"
+cp "$GITHUB_ACTION_PATH/Dockerfile.react" "$BUILD_CTX/Dockerfile"
+
+# Build image
+echo "🐳 Building image..."
+docker build \
+  -t "$REGISTRY/$IMAGE_NAME:$TAG" \
+  -t "$REGISTRY/$IMAGE_NAME:$SHA_TAG" \
+  "$BUILD_CTX"
+
+# Push image
+echo "📤 Pushing image..."
+docker push "$REGISTRY/$IMAGE_NAME:$TAG"
+docker push "$REGISTRY/$IMAGE_NAME:$SHA_TAG"
+
+# Get image digest
+IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$REGISTRY/$IMAGE_NAME:$SHA_TAG")
+
+# Outputs
+echo "image_name=$REGISTRY/$IMAGE_NAME:$SHA_TAG" >> "$GITHUB_OUTPUT"
+echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
+echo "push_status=success" >> "$GITHUB_OUTPUT"
+
+echo "✅ React image pushed successfully"

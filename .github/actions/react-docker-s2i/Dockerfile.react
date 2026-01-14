@@ -1,13 +1,14 @@
+FROM nginx:alpine
 
-FROM node:18-alpine
+# Clean default Nginx content
+RUN rm -rf /usr/share/nginx/html/*
 
-RUN apk add --no-cache \
-    git \
-    bash
+# Copy React build output
+COPY dist/ /usr/share/nginx/html/
 
-WORKDIR /github/workspace
+# Copy nginx config from project repo
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+EXPOSE 80
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
