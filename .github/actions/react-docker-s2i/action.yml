@@ -1,31 +1,26 @@
 name: Custom React S2I Action
-description:  Source-to-Image (S2I) style action that builds and pushes React app to GHCR
+description: Source-to-Image (S2I) style action that builds and pushes React app to GHCR
 
 inputs:
-    registry:
-        description: Container registry(ex. ghcr.io)
-        required: true
-    username:
-        description: Registry username
-        required: true
-    password:
-        description: Registry password/token
-        required: true
-    image-name:
-        description: Image name without tag
-        required: true
-    tag:
-        description: Image tag 
-        default: latest
-        required: false
-        
+  registry:
+    required: true
+  username:
+    required: true
+  password:
+    required: true
+  image-name:
+    required: true
+  tag:
+    required: false
+    default: latest
+
 outputs:
   image_name:
-    description:  Full image name with SHA tag
+    description: Full image name with SHA tag
   image_digest:
-    description:  Docker image digest
+    description: Docker image digest
   push_status:
-    description:  Push status (success/failed)
+    description: Push status
 
 runs:
   using: composite
@@ -35,5 +30,11 @@ runs:
       shell: bash
 
     - name: Build & Push React Image
-      run: ${{ github.action_path }}/entrypoint.sh
       shell: bash
+      env:
+        INPUT_REGISTRY: ${{ inputs.registry }}
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_PASSWORD: ${{ inputs.password }}
+        INPUT_IMAGE_NAME: ${{ inputs.image-name }}
+        INPUT_TAG: ${{ inputs.tag }}
+      run: ${{ github.action_path }}/entrypoint.sh
