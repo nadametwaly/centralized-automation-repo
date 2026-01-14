@@ -28,7 +28,12 @@ outputs:
     description:  Push status (success/failed)
 
 runs:
-  using: docker
-  image: Dockerfile.react 
-  args: 
-    - ${{ inputs.message }}
+  using: composite
+  steps:
+    - name: Make entrypoint executable
+      run: chmod +x ${{ github.action_path }}/entrypoint.sh
+      shell: bash
+
+    - name: Build & Push React Image
+      run: ${{ github.action_path }}/entrypoint.sh
+      shell: bash
