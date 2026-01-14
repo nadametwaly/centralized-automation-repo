@@ -38,7 +38,7 @@ jobs:
             actions: read
 
         env:
-            IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/dotnet-app
+            IMAGE_NAME: ${{ inputs.docker_username }}/dotnet-app
 
         steps:
           - name: Checkout code
@@ -95,7 +95,7 @@ jobs:
           - name: Run Trivy     #vulnerability scanner
             uses: aquasecurity/trivy-action@0.33.1
             with:
-                image-ref: '$IMAGE_NAME:latest'
+                image-ref: '${{ env.IMAGE_NAME }}:latest'
                 format: 'sarif'
                 output: 'trivy-results.sarif'
                 severity: 'CRITICAL,HIGH'
