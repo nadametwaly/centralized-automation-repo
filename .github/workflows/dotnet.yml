@@ -49,14 +49,7 @@ jobs:
             with:
                 dotnet-version: ${{ inputs.dotnet-version }}
 
-          - name: Restore
-            run: dotnet restore ${{ inputs.project-path }}
-
-          - name: Build
-            run: dotnet build ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} --no-restore
-
-          - name: Publish
-            run: dotnet publish ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} -o build-output
+         
 
           - name: Unit Tests
             if: ${{ inputs.run-tests }}
@@ -76,8 +69,15 @@ jobs:
             uses: github/codeql-action/init@v3
             with:
                 languages: csharp
+          - name: Restore
+            run: dotnet restore ${{ inputs.project-path }}
+          - name: Build (CodeQL capture)
+            run: dotnet build ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} --no-restore
           - name: Perform CodeQL Analysis
             uses: github/codeql-action/analyze@v3
+          - name: Publish
+            run: dotnet publish ${{ inputs.project-path }} -c ${{ inputs.build-configuration }} -o build-output
+
 
           - name: Login to DockerHub
             uses: docker/login-action@v3
