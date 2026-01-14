@@ -1,6 +1,6 @@
 FROM nginx:alpine
 
-# Clean default Nginx content
+# Remove default Nginx static files
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy React build output
