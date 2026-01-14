@@ -1,17 +1,13 @@
-# Use Node.js Alpine as base image
+
 FROM node:18-alpine
 
-# Install necessary build tools
 RUN apk add --no-cache \
     git \
     bash
 
-# Set working directory
 WORKDIR /github/workspace
 
-# Copy the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
