@@ -5,7 +5,9 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+
+# Use npm install instead of npm ci
+RUN npm install
 
 # Copy all source files
 COPY . .
@@ -16,7 +18,7 @@ RUN npm run build
 # Stage 2: Serve React with Nginx
 FROM nginx:alpine
 
-# Copy React build output to Nginx html folder
+# Copy React build output
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Generate Nginx config for SPA routing
@@ -26,4 +28,13 @@ RUN echo 'server {\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
     location / {\n\
-        try_files $uri /index_
+        try_files $uri /index.html;\n\
+    }\n\
+    error_page 404 /index.html;\n\
+}' > /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
