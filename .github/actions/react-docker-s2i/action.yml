@@ -15,12 +15,9 @@ inputs:
     default: latest
 
 outputs:
-  image_name:
+  image-name:
     description: Full image name with SHA tag
-  image_digest:
-    description: Docker image digest
-  push_status:
-    description: Push status
+    value: ${{ steps.build-push.outputs.image_name }}
 
 runs:
   using: composite
