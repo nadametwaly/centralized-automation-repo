@@ -16,7 +16,7 @@ echo "Build Docker image"
 docker build \
   -t "$IMAGE" \
   -f "$GITHUB_ACTION_PATH/Dockerfile.react" \
-  "$WORKSPACE/frontend"
+  "$WORKSPACE/React-Frontend"
 
 echo "Push Docker image"
 docker push "$IMAGE"
