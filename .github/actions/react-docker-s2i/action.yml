@@ -17,7 +17,10 @@ inputs:
 outputs:
   image-name:
     description: Full image name with SHA tag
-    value: ${{ steps.img.outputs.image_name }}
+  image_digest:
+    description: Docker image digest
+  push_status:
+    description: Push status
 
 runs:
   using: composite
@@ -27,7 +30,6 @@ runs:
       shell: bash
 
     - name: Build & Push React Image
-      id: img
       shell: bash
       env:
         INPUT_REGISTRY: ${{ inputs.registry }}
